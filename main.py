@@ -1,3 +1,12 @@
+
+import os
+import numpy as np
+import sys
+import sklearn
+import utils
+
+from utils.constants import ARCHIVE_NAMES, CLASSIFIERS, ITERATIONS
+from utils.utils import read_all_datasets
 from utils.utils import generate_results_csv
 from utils.utils import create_directory
 from utils.utils import read_dataset
@@ -5,15 +14,6 @@ from utils.utils import transform_mts_to_ucr_format
 from utils.utils import visualize_filter
 from utils.utils import viz_for_survey_paper
 from utils.utils import viz_cam
-import os
-import numpy as np
-import sys
-import sklearn
-import utils
-from utils.constants import CLASSIFIERS
-from utils.constants import ARCHIVE_NAMES
-from utils.constants import ITERATIONS
-from utils.utils import read_all_datasets
 
 
 def fit_classifier():
@@ -30,10 +30,10 @@ def fit_classifier():
     y_train = enc.transform(y_train.reshape(-1, 1)).toarray()
     y_test = enc.transform(y_test.reshape(-1, 1)).toarray()
 
-    # save orignal y because later we will use binary
+    # save original y because later we will use binary
     y_true = np.argmax(y_test, axis=1)
 
-    if len(x_train.shape) == 2:  # if univariate
+    if len(x_train.shape) == 2:  # if uni-variate
         # add a dimension to make it multivariate with one dimension 
         x_train = x_train.reshape((x_train.shape[0], x_train.shape[1], 1))
         x_test = x_test.reshape((x_test.shape[0], x_test.shape[1], 1))
@@ -77,7 +77,7 @@ def create_classifier(classifier_name, input_shape, nb_classes, output_directory
         return inception.Classifier_INCEPTION(output_directory, input_shape, nb_classes, verbose)
 
 
-############################################### main
+# main
 
 # change this directory for your machine
 root_dir = '/b/home/uha/hfawaz-datas/dl-tsc-temp/'
@@ -135,22 +135,19 @@ else:
     if itr == '_itr_0':
         itr = ''
 
-    output_directory = root_dir + '/results/' + classifier_name + '/' + archive_name + itr + '/' + \
-                       dataset_name + '/'
+    output_directory = root_dir + '/results/' + classifier_name + '/' + archive_name + itr + '/' + dataset_name
 
-    test_dir_df_metrics = output_directory + 'df_metrics.csv'
+    test_dir_df_metrics = os.path.join(output_directory, 'df_metrics.csv')
 
     print('Method: ', archive_name, dataset_name, classifier_name, itr)
 
     if os.path.exists(test_dir_df_metrics):
         print('Already done')
     else:
-
         create_directory(output_directory)
         datasets_dict = read_dataset(root_dir, archive_name, dataset_name)
 
         fit_classifier()
-
         print('DONE')
 
         # the creation of this directory means
