@@ -1,27 +1,19 @@
 
-import os
 import numpy as np
+import os
 import sys
 import sklearn
-import utils
 
-from utils.constants import ARCHIVE_NAMES, CLASSIFIERS, ITERATIONS
-from utils.utils import read_all_datasets
-from utils.utils import generate_results_csv
-from utils.utils import create_directory
-from utils.utils import read_dataset
-from utils.utils import transform_mts_to_ucr_format
-from utils.utils import visualize_filter
-from utils.utils import viz_for_survey_paper
-from utils.utils import viz_cam
+from classifiers import classifier_factory
+from utils import constants
+from utils import utils
+
+# change this directory for your machine
+ROOT_DIR = '/b/home/uha/hfawaz-datas/dl-tsc-temp/'
 
 
-def fit_classifier():
-    x_train = datasets_dict[dataset_name][0]
-    y_train = datasets_dict[dataset_name][1]
-    x_test = datasets_dict[dataset_name][2]
-    y_test = datasets_dict[dataset_name][3]
-
+def fit_classifier(classifier_name, datasets, output_directory, verbose=False):
+    x_train, y_train, x_test, y_test = datasets
     nb_classes = len(np.unique(np.concatenate((y_train, y_test), axis=0)))
 
     # transform the labels from integers to one hot vectors
@@ -39,8 +31,14 @@ def fit_classifier():
         x_test = x_test.reshape((x_test.shape[0], x_test.shape[1], 1))
 
     input_shape = x_train.shape[1:]
-    classifier = create_classifier(classifier_name, input_shape, nb_classes, output_directory)
+    classifier_params = {
+        'input_shape': input_shape,
+        'nb_classes': nb_classes,
+        'verbose': verbose
+    }
 
+    classifier_obj = classifier_factory.get_classifier(classifier_name)
+    classifier = classifier_obj(output_directory, classifier_params)
     classifier.fit(x_train, y_train, x_test, y_test, y_true)
 
 
@@ -78,52 +76,48 @@ def create_classifier(classifier_name, input_shape, nb_classes, output_directory
 
 
 # main
-
-# change this directory for your machine
-root_dir = '/b/home/uha/hfawaz-datas/dl-tsc-temp/'
-
 if sys.argv[1] == 'run_all':
-    for classifier_name in CLASSIFIERS:
+    for classifier_name in constants.CLASSIFIERS:
         print('classifier_name', classifier_name)
 
-        for archive_name in ARCHIVE_NAMES:
+        for archive_name in constants.ARCHIVE_NAMES:
             print('\tarchive_name', archive_name)
 
-            datasets_dict = read_all_datasets(root_dir, archive_name)
+            datasets_dict = utils.read_all_datasets(ROOT_DIR, archive_name)
 
-            for iter in range(ITERATIONS):
-                print('\t\titer', iter)
+            for _iter in range(constants.ITERATIONS):
+                print('\t\titer : {}'.format(_iter))
 
                 trr = ''
-                if iter != 0:
-                    trr = '_itr_' + str(iter)
+                if _iter != 0:
+                    trr = '_itr_{}'.format(_iter)
 
-                tmp_output_directory = root_dir + '/results/' + classifier_name + '/' + archive_name + trr + '/'
+                tmp_output_directory = os.path.join(ROOT_DIR, 'results', classifier_name, archive_name + trr)
 
-                for dataset_name in utils.constants.dataset_names_for_archive[archive_name]:
+                for dataset_name in constants.dataset_names_for_archive[archive_name]:
                     print('\t\t\tdataset_name: ', dataset_name)
 
-                    output_directory = tmp_output_directory + dataset_name + '/'
+                    output_directory = os.path.join(tmp_output_directory, dataset_name)
+                    utils.create_directory(output_directory)
 
-                    create_directory(output_directory)
-
-                    fit_classifier()
+                    dataset = datasets_dict[dataset_name]
+                    fit_classifier(classifier_name, dataset, output_directory)
 
                     print('\t\t\t\tDONE')
 
                     # the creation of this directory means
-                    create_directory(output_directory + '/DONE')
+                    utils.create_directory(os.path.join(output_directory, 'DONE'))
 
 elif sys.argv[1] == 'transform_mts_to_ucr_format':
-    transform_mts_to_ucr_format()
+    utils.transform_mts_to_ucr_format()
 elif sys.argv[1] == 'visualize_filter':
-    visualize_filter(root_dir)
+    utils.visualize_filter(ROOT_DIR)
 elif sys.argv[1] == 'viz_for_survey_paper':
-    viz_for_survey_paper(root_dir)
+    utils.viz_for_survey_paper(ROOT_DIR)
 elif sys.argv[1] == 'viz_cam':
-    viz_cam(root_dir)
+    utils.viz_cam(ROOT_DIR)
 elif sys.argv[1] == 'generate_results_csv':
-    res = generate_results_csv('results.csv', root_dir)
+    res = utils.generate_results_csv('results.csv', ROOT_DIR)
     print(res.to_string())
 else:
     # this is the code used to launch an experiment on a dataset
@@ -135,8 +129,7 @@ else:
     if itr == '_itr_0':
         itr = ''
 
-    output_directory = root_dir + '/results/' + classifier_name + '/' + archive_name + itr + '/' + dataset_name
-
+    output_directory = os.path.join(ROOT_DIR, 'results', classifier_name, archive_name + itr, dataset_name)
     test_dir_df_metrics = os.path.join(output_directory, 'df_metrics.csv')
 
     print('Method: ', archive_name, dataset_name, classifier_name, itr)
@@ -144,11 +137,11 @@ else:
     if os.path.exists(test_dir_df_metrics):
         print('Already done')
     else:
-        create_directory(output_directory)
-        datasets_dict = read_dataset(root_dir, archive_name, dataset_name)
+        utils.create_directory(output_directory)
+        dataset = utils.read_dataset(ROOT_DIR, archive_name, dataset_name)
 
-        fit_classifier()
+        fit_classifier(classifier_name, dataset, output_directory)
         print('DONE')
 
         # the creation of this directory means
-        create_directory(output_directory + '/DONE')
+        utils.create_directory(os.path.join(output_directory, 'DONE'))

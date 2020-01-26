@@ -4,7 +4,7 @@ import tensorflow as tf
 import numpy as np 
 import time
 
-from utils.utils import save_logs_t_leNet as save_logs
+from utils.utils import save_logs_t_lenet as save_logs
 from utils.utils import calculate_metrics
 
 class Classifier_TLENET:

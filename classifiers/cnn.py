@@ -1,25 +1,27 @@
 # FCN model
 # when tuning start with learning rate->mini_batch_size ->
 # momentum-> #hidden_units -> # learning_rate_decay -> #layers
-import tensorflow.keras as keras
-import tensorflow as tf
+
 import numpy as np
+import os
+import tensorflow as tf
+import tensorflow.keras as keras
 import time
 
 from utils.utils import save_logs
 from utils.utils import calculate_metrics
 
-class Classifier_CNN:
 
+class Classifier_CNN:
     def __init__(self, output_directory, input_shape, nb_classes, verbose=False,build=True):
         self.output_directory = output_directory
 
-        if build == True:
+        if build:
             self.model = self.build_model(input_shape, nb_classes)
-            if (verbose == True):
+            if verbose:
                 self.model.summary()
             self.verbose = verbose
-            self.model.save_weights(self.output_directory + 'model_init.hdf5')
+            self.model.save_weights(os.path.join(self.output_directory, 'model_init.hdf5'))
 
         return
 
@@ -27,25 +29,25 @@ class Classifier_CNN:
         padding = 'valid'
         input_layer = keras.layers.Input(input_shape)
 
-        if input_shape[0] < 60: # for italypowerondemand dataset
+        if input_shape[0] < 60:  # for "italypowerondemand" dataset
             padding = 'same'
 
-        conv1 = keras.layers.Conv1D(filters=6,kernel_size=7,padding=padding,activation='sigmoid')(input_layer)
+        conv1 = keras.layers.Conv1D(filters=6, kernel_size=7, padding=padding, activation='sigmoid')(input_layer)
         conv1 = keras.layers.AveragePooling1D(pool_size=3)(conv1)
 
-        conv2 = keras.layers.Conv1D(filters=12,kernel_size=7,padding=padding,activation='sigmoid')(conv1)
+        conv2 = keras.layers.Conv1D(filters=12, kernel_size=7, padding=padding, activation='sigmoid')(conv1)
         conv2 = keras.layers.AveragePooling1D(pool_size=3)(conv2)
 
         flatten_layer = keras.layers.Flatten()(conv2)
 
-        output_layer = keras.layers.Dense(units=nb_classes,activation='sigmoid')(flatten_layer)
+        output_layer = keras.layers.Dense(units=nb_classes, activation='sigmoid')(flatten_layer)
 
         model = keras.models.Model(inputs=input_layer, outputs=output_layer)
 
         model.compile(loss='mean_squared_error', optimizer=keras.optimizers.Adam(),
                       metrics=['accuracy'])
 
-        file_path = self.output_directory + 'best_model.hdf5'
+        file_path = os.path.join(self.output_directory, 'best_model.hdf5')
 
         model_checkpoint = keras.callbacks.ModelCheckpoint(filepath=file_path, monitor='loss',
                                                            save_best_only=True)
@@ -70,9 +72,11 @@ class Classifier_CNN:
 
         duration = time.time() - start_time
 
-        self.model.save(self.output_directory+'last_model.hdf5')
+        last_model_file = os.path.join(self.output_directory, 'last_model.hdf5')
+        self.model.save(last_model_file)
 
-        model = keras.models.load_model(self.output_directory + 'best_model.hdf5')
+        best_model_file = os.path.join(self.output_directory, 'best_model.hdf5')
+        model = keras.models.load_model(best_model_file)
 
         y_pred = model.predict(x_val)
 
@@ -83,9 +87,9 @@ class Classifier_CNN:
 
         keras.backend.clear_session()
 
-    def predict(self, x_test,y_true,x_train,y_train,y_test,return_df_metrics = True):
-        model_path = self.output_directory + 'best_model.hdf5'
-        model = keras.models.load_model(model_path)
+    def predict(self, x_test, y_true, x_train, y_train, y_test, return_df_metrics=True):
+        best_model_path = os.path.join(self.output_directory, 'best_model.hdf5')
+        model = keras.models.load_model(best_model_path)
         y_pred = model.predict(x_test)
         if return_df_metrics:
             y_pred = np.argmax(y_pred, axis=1)
