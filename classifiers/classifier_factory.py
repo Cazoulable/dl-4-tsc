@@ -1,6 +1,6 @@
 
-import sys
-from classifiers import *
+
+from classifiers import classifiers
 
 classifier_map = {
     'fcn': 'FCN',
@@ -18,10 +18,10 @@ classifier_map = {
 
 def get_classifier(classifier_name):
 
-    classifier_obj = getattr(sys.modules[__name__], classifier_map[classifier_name])
+    classifier_obj = getattr(classifiers, classifier_map[classifier_name])
     return classifier_obj
 
-#
+
 # def create_classifier(classifier_name, input_shape, nb_classes, output_directory, verbose=False):
 #     if classifier_name == 'fcn':
 #         from classifiers import fcn

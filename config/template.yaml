@@ -1,0 +1,21 @@
+
+job_type: train
+job_id: 0
+
+classifier:
+  name: resnet
+
+dataset:
+  name: parkinson
+  study: CIS
+  partition: training
+
+data:
+  label_name: on_off
+  batch_size: 16
+  sample_length: 1200
+  split_ratio: 0.8
+
+training:
+  n_epochs: 8
+

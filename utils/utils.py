@@ -1,8 +1,10 @@
 
+import glob
 import numpy as np
 import operator
 import os
 import pandas as pd
+import yaml
 from scipy.interpolate import interp1d
 from scipy.io import loadmat
 from sklearn.metrics import accuracy_score
@@ -50,6 +52,24 @@ def create_path(root_dir, classifier_name, archive_name):
     else:
         os.makedirs(output_dir)
         return output_dir
+
+
+def parse_config_file(config_file):
+    assert os.path.exists(config_file), "The configuration file '{}' does not exist.".format(config_file)
+    with open(config_file, 'r') as stream:
+        try:
+            config = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
+    return config
+
+
+def get_experiment_id(root_dir):
+    prev_experiments = glob.glob(os.path.join(root_dir, '*'))
+    # now = datetime.datetime.now()
+    # t = '{:04d}-{:02d}-{:02d}_{:02d}-{:02d}-{:02d}'.format(now.year, now.month, now.day, now.hour, now.minute, now.second)
+    # return '{:04d}-{}'.format(len(prev_experiments), t)
+    return '{:04d}'.format(len(prev_experiments))
 
 
 def read_dataset(root_dir, archive_name, dataset_name):
