@@ -1,0 +1,30 @@
+
+job_type: train
+
+classifier:
+  architecture: ResNet
+  loss:
+    name: categorical_crossentropy
+    schedule:
+      factor: 0.5
+      patience: 50
+      min_lr: 0.0001
+  optimizer:
+    name: Adam
+  verbose: true
+
+training:
+  n_epochs: 8
+
+dataset:
+  name: parkinson
+  study: CIS
+  partition: training
+
+data:
+  label_name: on_off
+  batch_size: 16
+  sample_length: 1200
+  split_ratio: 0.8
+
+

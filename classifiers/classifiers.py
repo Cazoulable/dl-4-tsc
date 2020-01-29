@@ -4,25 +4,20 @@ import os
 import tensorflow as tf
 import tensorflow.keras as keras
 import time
-
-from utils import utils
-
 import matplotlib
 matplotlib.use('agg')
 
+from utils import utils
+
 
 class NetworkBasedClassifier:
-    def __init__(self, output_directory, input_shape, n_classes, verbose):
+    def __init__(self, config, output_directory, input_shape, n_classes):
+        self.config = config
         self.output_directory = output_directory
         self.input_shape = input_shape
         self.n_classes = n_classes
-        self.verbose = verbose
 
-        # Learning rate parameters
-        self.factor = 0.5
-        self.patience = 50
-        self.min_lr = 0.0001
-
+        self.verbose = config['verbose']
         self.callbacks = None
         self.model = None
 
@@ -30,6 +25,7 @@ class NetworkBasedClassifier:
         # Define model
         self.set_callbacks()
         self.set_model()
+        self.model.compile(loss=self.loss, optimizer=self.optimizer)
 
         if self.verbose:
             self.model.summary()
@@ -40,10 +36,18 @@ class NetworkBasedClassifier:
     def get_file_path(self, file_name):
         return os.path.join(self.output_directory, file_name)
 
+    @property
+    def loss(self):
+        return self.config['loss']['name']
+
+    @property
+    def optimizer(self):
+        return getattr(keras.optimizers, self.config['optimizer']['name'])()
+
     def set_callbacks(self):
         model_file_path = self.get_file_path('best_model.hdf5')
         model_checkpoint = keras.callbacks.ModelCheckpoint(filepath=model_file_path, monitor='loss', save_best_only=True)
-        reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=self.factor, patience=self.patience, min_lr=self.min_lr)
+        reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='loss', **self.config['loss']['schedule'])
         self.callbacks = [reduce_lr, model_checkpoint]
 
     def set_model(self):
@@ -80,38 +84,38 @@ class NetworkBasedClassifier:
         # keras.backend.clear_session()
         # return df_metrics
 
-    # def fit(self, x_train, y_train, x_val, y_val, y_true):
-    #     if not tf.test.is_gpu_available:
-    #         print('error')
-    #         exit()
-    #
-    #     # x_val and y_val are only used to monitor the test loss and NOT for training
-    #     mini_batch_size = int(min(x_train.shape[0] / 10, self.batch_size))
-    #
-    #     # Train model
-    #     start_time = time.time()
-    #     hist = self.model.fit(x_train, y_train, batch_size=mini_batch_size, epochs=self.nb_epochs,
-    #                           verbose=self.verbose, validation_data=(x_val, y_val), callbacks=self.callbacks)
-    #     duration = time.time() - start_time
-    #
-    #     # Save model
-    #     model_file = self.get_file_path('last_model.hdf5')
-    #     self.model.save(model_file)
-    #
-    #     # Run prediction ...
-    #     y_pred = self.predict(x_val, y_true, x_train, y_train, y_val, return_df_metrics=False)
-    #     # ... and save them
-    #     pred_file = self.get_file_path('y_pred.npy')
-    #     np.save(pred_file, y_pred)
-    #
-    #     # convert the predicted from binary to integer
-    #     y_pred = np.argmax(y_pred, axis=1)
-    #
-    #     # Save logs
-    #     df_metrics = utils.save_logs(self.output_directory, hist, y_pred, y_true, duration)
-    #
-    #     keras.backend.clear_session()
-    #     return df_metrics
+    def old_fit(self, x_train, y_train, x_val, y_val, y_true):
+        if not tf.test.is_gpu_available:
+            print('error')
+            exit()
+
+        # x_val and y_val are only used to monitor the test loss and NOT for training
+        mini_batch_size = int(min(x_train.shape[0] / 10, self.batch_size))
+
+        # Train model
+        start_time = time.time()
+        hist = self.model.fit(x_train, y_train, batch_size=mini_batch_size, epochs=self.nb_epochs,
+                              verbose=self.verbose, validation_data=(x_val, y_val), callbacks=self.callbacks)
+        duration = time.time() - start_time
+
+        # Save model
+        model_file = self.get_file_path('last_model.hdf5')
+        self.model.save(model_file)
+
+        # Run prediction ...
+        y_pred = self.predict(x_val, y_true, x_train, y_train, y_val, return_df_metrics=False)
+        # ... and save them
+        pred_file = self.get_file_path('y_pred.npy')
+        np.save(pred_file, y_pred)
+
+        # convert the predicted from binary to integer
+        y_pred = np.argmax(y_pred, axis=1)
+
+        # Save logs
+        df_metrics = utils.save_logs(self.output_directory, hist, y_pred, y_true, duration)
+
+        keras.backend.clear_session()
+        return df_metrics
 
     def predict(self, x_test, y_true, x_train, y_train, y_test, return_df_metrics=True):
         best_model_path = self.get_file_path('best_model.hdf5')
@@ -131,17 +135,6 @@ class NetworkBasedClassifier:
 
 
 class ResNet(NetworkBasedClassifier):
-
-    def __init__(self, output_directory, input_shape, n_classes, verbose):
-        super(ResNet, self).__init__(output_directory, input_shape, n_classes, verbose)
-        # Learning rate parameters
-        self.factor = 0.5
-        self.patience = 50
-        self.min_lr = 0.0001
-
-        # Training parameters
-        self.batch_size = 64
-        self.nb_epochs = 1500
 
     def set_model(self):
         n_feature_maps = 64
@@ -208,20 +201,10 @@ class ResNet(NetworkBasedClassifier):
         output_layer = keras.layers.Dense(self.n_classes, activation='softmax')(gap_layer)
 
         self.model = keras.models.Model(inputs=input_layer, outputs=output_layer)
-        self.model.compile(loss='categorical_crossentropy', optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
+        # self.model.compile(loss='categorical_crossentropy', optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
 
 
 class FCN(NetworkBasedClassifier):
-    def __init__(self, output_directory, input_shape, n_classes, verbose):
-        super(FCN, self).__init__(output_directory, input_shape, n_classes, verbose)
-        # # Learning rate parameters
-        # self.factor = 0.5
-        # self.patience = 50
-        # self.min_lr = 0.0001
-
-        # Training parameters
-        self.batch_size = 16
-        self.nb_epochs = 2000
 
     def set_model(self):
         input_layer = keras.layers.Input(self.input_shape)
@@ -243,21 +226,10 @@ class FCN(NetworkBasedClassifier):
         output_layer = keras.layers.Dense(self.n_classes, activation='softmax')(gap_layer)
 
         self.model = keras.models.Model(inputs=input_layer, outputs=output_layer)
-        self.model.compile(loss='categorical_crossentropy', optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
+        # self.model.compile(loss='categorical_crossentropy', optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
 
 
 class MLP(NetworkBasedClassifier):
-
-    def __init__(self, output_directory, input_shape, n_classes, verbose):
-        super(MLP, self).__init__(output_directory, input_shape, n_classes, verbose)
-        # Learning rate parameters
-        self.factor = 0.5
-        self.patience = 200
-        self.min_lr = 0.1
-
-        # Training parameters
-        self.batch_size = 16
-        self.nb_epochs = 5000
 
     def set_model(self):
         input_layer = keras.layers.Input(self.input_shape)
@@ -278,4 +250,4 @@ class MLP(NetworkBasedClassifier):
         output_layer = keras.layers.Dense(self.n_classes, activation='softmax')(output_layer)
 
         self.model = keras.models.Model(inputs=input_layer, outputs=output_layer)
-        self.model.compile(loss='categorical_crossentropy', optimizer=keras.optimizers.Adadelta(), metrics=['accuracy'])
+        # self.model.compile(loss='categorical_crossentropy', optimizer=keras.optimizers.Adadelta(), metrics=['accuracy'])

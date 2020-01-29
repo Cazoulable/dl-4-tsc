@@ -86,8 +86,8 @@ class ParkinsonDatasetGenerator(Sequence):
         # Input and output dimensions
         self.batch_size = batch_size
         self.sample_length = sample_length
-        self._n_channels = 3
-        self._n_classes = 5
+        self.n_channels = 3
+        self.n_classes = 5
 
         self.shuffle = shuffle
         self.indexes = None
@@ -109,11 +109,7 @@ class ParkinsonDatasetGenerator(Sequence):
 
     @property
     def input_shape(self):
-        return self.sample_length, self._n_channels
-
-    @property
-    def n_classes(self):
-        return self._n_classes
+        return self.sample_length, self.n_channels
 
     def on_epoch_end(self):
         """Updates indexes after each epoch"""
@@ -124,9 +120,7 @@ class ParkinsonDatasetGenerator(Sequence):
 
     def __data_generation(self, indexes):
         """Generates data containing batch_size samples"""
-        # X : (n_samples, *dim, n_channels)
-        # Initialization
-        x = np.empty((self.batch_size, self.sample_length, self._n_channels))
+        x = np.empty((self.batch_size, self.sample_length, self.n_channels))
         y = np.empty(self.batch_size, dtype=int)
 
         # Generate data

@@ -25,8 +25,7 @@ if __name__ == '__main__':
 
     else:
         # Initialize dataset
-        dataset_obj = dataset_factory.get_dataset(config['dataset']['name'])
-        dataset = dataset_obj(config['dataset'])
+        dataset = dataset_factory.get_dataset(config['dataset'])
         dataset.initialize()
 
         # Get data generator
@@ -35,8 +34,8 @@ if __name__ == '__main__':
         n_classes = train_generator.n_classes
 
         # Get classifier
-        classifier_obj = classifier_factory.get_classifier(config['classifier']['name'])
-        classifier = classifier_obj(experiment_dir, input_shape=input_shape, n_classes=n_classes, verbose=True)
+        classifier_obj = classifier_factory.get_classifier(config['classifier']['architecture'])
+        classifier = classifier_obj(config['classifier'], experiment_dir, input_shape=input_shape, n_classes=n_classes)
         classifier.initialize()
 
         # Train model

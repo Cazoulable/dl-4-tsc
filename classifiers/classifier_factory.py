@@ -2,23 +2,9 @@
 
 from classifiers import classifiers
 
-classifier_map = {
-    'fcn': 'FCN',
-    'mlp': 'MLP',
-    'resnet': 'ResNet',
-    # 'mcnn': 'MCNN',
-    # 'tlenet': 'TLeNet',
-    # 'twiesn': 'Twiesn',
-    # 'encoder': 'Encoder',
-    # 'mcdcnn': 'MCDCNN',
-    # 'cnn': 'CNN',
-    # 'inception': 'Inception'
-}
-
 
 def get_classifier(classifier_name):
-
-    classifier_obj = getattr(classifiers, classifier_map[classifier_name])
+    classifier_obj = getattr(classifiers, classifier_name)
     return classifier_obj
 
 

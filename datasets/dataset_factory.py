@@ -16,7 +16,8 @@ dataset_map = {
 }
 
 
-def get_dataset(dataset_name):
+def get_dataset(dataset_config):
 
-    dataset_obj = getattr(datasets, dataset_map[dataset_name])
-    return dataset_obj
+    dataset_obj = getattr(datasets, dataset_map[dataset_config['name']])
+    return dataset_obj(dataset_config)
+
